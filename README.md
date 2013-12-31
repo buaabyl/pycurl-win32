@@ -12,3 +12,8 @@ I guess this maybe mismatch of openssl version, so I try to build with 1.0.0.t a
 python throw this exception.
 
 So I decided to link openssl staticly, and everything fine.
+
+and I modify setup.py to include depend windows library and openssl, see setup.py source code for details.
+
+    library_dirs.append(os.path.join(curl_dir, "lib"))
+    extra_link_args.extend(["libeay32MD.lib", "ssleay32MD.lib", "advapi32.lib", "user32.lib"])
