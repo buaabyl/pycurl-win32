@@ -1,7 +1,8 @@
 #! /usr/bin/env python
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 # vi:ts=4:et
 
+import flaky
 import os.path
 import pycurl
 import unittest
@@ -19,31 +20,32 @@ from . import util
 
 setup_module, teardown_module = appmanager.setup(('app', 8380))
 
+@flaky.flaky(max_runs=3)
 class PostTest(unittest.TestCase):
     def setUp(self):
         self.curl = pycurl.Curl()
-    
+
     def tearDown(self):
         self.curl.close()
-    
+
     def test_post_single_field(self):
         pf = {'field1': 'value1'}
         self.urlencode_and_check(pf)
-    
+
     def test_post_multiple_fields(self):
         pf = {'field1':'value1', 'field2':'value2 with blanks', 'field3':'value3'}
         self.urlencode_and_check(pf)
-    
+
     def test_post_fields_with_ampersand(self):
         pf = {'field1':'value1', 'field2':'value2 with blanks and & chars',
               'field3':'value3'}
         self.urlencode_and_check(pf)
-    
+
     def urlencode_and_check(self, pf):
         self.curl.setopt(pycurl.URL, 'http://localhost:8380/postfields')
         postfields = urllib_parse.urlencode(pf)
         self.curl.setopt(pycurl.POSTFIELDS, postfields)
-        
+
         # But directly passing urlencode result into setopt call:
         #self.curl.setopt(pycurl.POSTFIELDS, urllib_parse.urlencode(pf))
         # produces:
@@ -62,16 +64,16 @@ class PostTest(unittest.TestCase):
         #   File "/usr/local/lib/python2.7/json/encoder.py", line 264, in iterencode
         #     return _iterencode(o, 0)
         # UnicodeDecodeError: 'utf8' codec can't decode byte 0x80 in position 4: invalid start byte
-        
+
         #self.curl.setopt(pycurl.VERBOSE, 1)
-        sio = util.StringIO()
+        sio = util.BytesIO()
         self.curl.setopt(pycurl.WRITEFUNCTION, sio.write)
         self.curl.perform()
         self.assertEqual(200, self.curl.getinfo(pycurl.HTTP_CODE))
-        body = sio.getvalue()
+        body = sio.getvalue().decode()
         returned_fields = json.loads(body)
         self.assertEqual(pf, returned_fields)
-    
+
     def test_post_with_null_byte(self):
         send = [
             ('field3', (pycurl.FORM_CONTENTS, 'this is wei\000rd, but null-bytes are okay'))
@@ -98,15 +100,100 @@ class PostTest(unittest.TestCase):
             'data': contents,
         }]
         self.check_post(send, expect, 'http://localhost:8380/files')
-    
+
+    def test_post_byte_buffer(self):
+        contents = util.b('hello, world!')
+        send = [
+            ('field2', (pycurl.FORM_BUFFER, 'uploaded.file', pycurl.FORM_BUFFERPTR, contents)),
+        ]
+        expect = [{
+            'name': 'field2',
+            'filename': 'uploaded.file',
+            'data': 'hello, world!',
+        }]
+        self.check_post(send, expect, 'http://localhost:8380/files')
+
+    def test_post_unicode_buffer(self):
+        contents = util.u('hello, world!')
+        send = [
+            ('field2', (pycurl.FORM_BUFFER, 'uploaded.file', pycurl.FORM_BUFFERPTR, contents)),
+        ]
+        expect = [{
+            'name': 'field2',
+            'filename': 'uploaded.file',
+            'data': 'hello, world!',
+        }]
+        self.check_post(send, expect, 'http://localhost:8380/files')
+
+    def test_post_tuple_of_tuples_of_tuples(self):
+        contents = util.u('hello, world!')
+        send = (
+            ('field2', (pycurl.FORM_BUFFER, 'uploaded.file', pycurl.FORM_BUFFERPTR, contents)),
+        )
+        expect = [{
+            'name': 'field2',
+            'filename': 'uploaded.file',
+            'data': 'hello, world!',
+        }]
+        self.check_post(send, expect, 'http://localhost:8380/files')
+
+    def test_post_tuple_of_lists_of_tuples(self):
+        contents = util.u('hello, world!')
+        send = (
+            ['field2', (pycurl.FORM_BUFFER, 'uploaded.file', pycurl.FORM_BUFFERPTR, contents)],
+        )
+        expect = [{
+            'name': 'field2',
+            'filename': 'uploaded.file',
+            'data': 'hello, world!',
+        }]
+        self.check_post(send, expect, 'http://localhost:8380/files')
+
+    def test_post_tuple_of_tuple_of_lists(self):
+        contents = util.u('hello, world!')
+        send = (
+            ('field2', [pycurl.FORM_BUFFER, 'uploaded.file', pycurl.FORM_BUFFERPTR, contents]),
+        )
+        expect = [{
+            'name': 'field2',
+            'filename': 'uploaded.file',
+            'data': 'hello, world!',
+        }]
+        self.check_post(send, expect, 'http://localhost:8380/files')
+
+    def test_post_list_of_tuple_of_tuples(self):
+        contents = util.u('hello, world!')
+        send = [
+            ('field2', (pycurl.FORM_BUFFER, 'uploaded.file', pycurl.FORM_BUFFERPTR, contents)),
+        ]
+        expect = [{
+            'name': 'field2',
+            'filename': 'uploaded.file',
+            'data': 'hello, world!',
+        }]
+        self.check_post(send, expect, 'http://localhost:8380/files')
+
+    def test_post_list_of_list_of_lists(self):
+        contents = util.u('hello, world!')
+        send = [
+            ['field2', [pycurl.FORM_BUFFER, 'uploaded.file', pycurl.FORM_BUFFERPTR, contents]],
+        ]
+        expect = [{
+            'name': 'field2',
+            'filename': 'uploaded.file',
+            'data': 'hello, world!',
+        }]
+        self.check_post(send, expect, 'http://localhost:8380/files')
+
     # XXX this test takes about a second to run, check keep-alives?
     def check_post(self, send, expect, endpoint):
         self.curl.setopt(pycurl.URL, endpoint)
         self.curl.setopt(pycurl.HTTPPOST, send)
         #self.curl.setopt(pycurl.VERBOSE, 1)
-        sio = util.StringIO()
+        sio = util.BytesIO()
         self.curl.setopt(pycurl.WRITEFUNCTION, sio.write)
         self.curl.perform()
-        body = sio.getvalue()
+        self.assertEqual(200, self.curl.getinfo(pycurl.HTTP_CODE))
+        body = sio.getvalue().decode()
         returned_fields = json.loads(body)
         self.assertEqual(expect, returned_fields)

@@ -1,1 +1,0 @@
-build with MD, but ssl and curl library is static link, not dll

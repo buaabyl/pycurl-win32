@@ -1,7 +1,8 @@
 #! /usr/bin/env python
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 # vi:ts=4:et
 
+import flaky
 import pycurl
 import unittest, signal
 import time as _time
@@ -11,6 +12,7 @@ from . import util
 
 setup_module, teardown_module = appmanager.setup(('app', 8380))
 
+@flaky.flaky(max_runs=3)
 class PauseTest(unittest.TestCase):
     def setUp(self):
         self.curl = pycurl.Curl()
@@ -27,7 +29,7 @@ class PauseTest(unittest.TestCase):
     def check_pause(self, call):
         # the app sleeps for 0.5 seconds
         self.curl.setopt(pycurl.URL, 'http://localhost:8380/pause')
-        sio = util.StringIO()
+        sio = util.BytesIO()
         state = dict(paused=False, resumed=False)
         if call:
             def writefunc(data):
@@ -85,7 +87,7 @@ class PauseTest(unittest.TestCase):
         m.remove_handle(self.curl)
         m.close()
         
-        self.assertEqual('part1part2', sio.getvalue())
+        self.assertEqual('part1part2', sio.getvalue().decode())
         end = _time.time()
         # check that client side waited
         self.assertTrue(end-start > 1)

@@ -1,9 +1,10 @@
 #! /usr/bin/env python
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 # vi:ts=4:et
 
 import pycurl
 import unittest
+import nose.tools
 import select
 
 from . import appmanager
@@ -25,10 +26,10 @@ def teardown_module(mod):
 
 class MultiTest(unittest.TestCase):
     def test_multi(self):
-        io1 = util.StringIO()
-        io2 = util.StringIO()
+        io1 = util.BytesIO()
+        io2 = util.BytesIO()
         m = pycurl.CurlMulti()
-        m.handles = []
+        handles = []
         c1 = pycurl.Curl()
         c2 = pycurl.Curl()
         c1.setopt(c1.URL, 'http://localhost:8380/success')
@@ -37,10 +38,10 @@ class MultiTest(unittest.TestCase):
         c2.setopt(c1.WRITEFUNCTION, io2.write)
         m.add_handle(c1)
         m.add_handle(c2)
-        m.handles.append(c1)
-        m.handles.append(c2)
+        handles.append(c1)
+        handles.append(c2)
 
-        num_handles = len(m.handles)
+        num_handles = len(handles)
         while num_handles:
             while 1:
                 ret, num_handles = m.perform()
@@ -50,13 +51,12 @@ class MultiTest(unittest.TestCase):
 
         m.remove_handle(c2)
         m.remove_handle(c1)
-        del m.handles
         m.close()
         c1.close()
         c2.close()
         
-        self.assertEqual('success', io1.getvalue())
-        self.assertEqual('success', io2.getvalue())
+        self.assertEqual('success', io1.getvalue().decode())
+        self.assertEqual('success', io2.getvalue().decode())
     
     def test_multi_select_fdset(self):
         c1 = pycurl.Curl()
@@ -65,9 +65,9 @@ class MultiTest(unittest.TestCase):
         c1.setopt(c1.URL, "http://localhost:8380/success")
         c2.setopt(c2.URL, "http://localhost:8381/success")
         c3.setopt(c3.URL, "http://localhost:8382/success")
-        c1.body = util.StringIO()
-        c2.body = util.StringIO()
-        c3.body = util.StringIO()
+        c1.body = util.BytesIO()
+        c2.body = util.BytesIO()
+        c3.body = util.BytesIO()
         c1.setopt(c1.WRITEFUNCTION, c1.body.write)
         c2.setopt(c2.WRITEFUNCTION, c2.body.write)
         c3.setopt(c3.WRITEFUNCTION, c3.body.write)
@@ -103,9 +103,9 @@ class MultiTest(unittest.TestCase):
         c2.close()
         c3.close()
         
-        self.assertEqual('success', c1.body.getvalue())
-        self.assertEqual('success', c2.body.getvalue())
-        self.assertEqual('success', c3.body.getvalue())
+        self.assertEqual('success', c1.body.getvalue().decode())
+        self.assertEqual('success', c2.body.getvalue().decode())
+        self.assertEqual('success', c3.body.getvalue().decode())
     
     def test_multi_status_codes(self):
         # init
@@ -120,7 +120,7 @@ class MultiTest(unittest.TestCase):
             c = pycurl.Curl()
             # save info in standard Python attributes
             c.url = url.rstrip()
-            c.body = util.StringIO()
+            c.body = util.BytesIO()
             c.http_code = -1
             m.handles.append(c)
             # pycurl API calls
@@ -149,13 +149,13 @@ class MultiTest(unittest.TestCase):
         m.close()
 
         # check result
-        self.assertEqual('success', m.handles[0].body.getvalue())
+        self.assertEqual('success', m.handles[0].body.getvalue().decode())
         self.assertEqual(200, m.handles[0].http_code)
         # bottle generated response body
-        self.assertEqual('forbidden', m.handles[1].body.getvalue())
+        self.assertEqual('forbidden', m.handles[1].body.getvalue().decode())
         self.assertEqual(403, m.handles[1].http_code)
         # bottle generated response body
-        self.assertEqual('not found', m.handles[2].body.getvalue())
+        self.assertEqual('not found', m.handles[2].body.getvalue().decode())
         self.assertEqual(404, m.handles[2].http_code)
     
     def check_adding_closed_handle(self, close_fn):
@@ -171,7 +171,7 @@ class MultiTest(unittest.TestCase):
             c = pycurl.Curl()
             # save info in standard Python attributes
             c.url = url
-            c.body = util.StringIO()
+            c.body = util.BytesIO()
             c.http_code = -1
             c.debug = 0
             m.handles.append(c)
@@ -210,13 +210,13 @@ class MultiTest(unittest.TestCase):
         m.close()
 
         # check result
-        self.assertEqual('success', m.handles[0].body.getvalue())
+        self.assertEqual('success', m.handles[0].body.getvalue().decode())
         self.assertEqual(200, m.handles[0].http_code)
         # bottle generated response body
-        self.assertEqual('forbidden', m.handles[1].body.getvalue())
+        self.assertEqual('forbidden', m.handles[1].body.getvalue().decode())
         self.assertEqual(403, m.handles[1].http_code)
         # bottle generated response body
-        self.assertEqual('', m.handles[2].body.getvalue())
+        self.assertEqual('', m.handles[2].body.getvalue().decode())
         self.assertEqual(-1, m.handles[2].http_code)
     
     def _remove_then_close(self, m, c):
@@ -249,9 +249,9 @@ class MultiTest(unittest.TestCase):
         c1.setopt(c1.URL, "http://localhost:8380/success")
         c2.setopt(c2.URL, "http://localhost:8381/success")
         c3.setopt(c3.URL, "http://localhost:8382/success")
-        c1.body = util.StringIO()
-        c2.body = util.StringIO()
-        c3.body = util.StringIO()
+        c1.body = util.BytesIO()
+        c2.body = util.BytesIO()
+        c3.body = util.BytesIO()
         c1.setopt(c1.WRITEFUNCTION, c1.body.write)
         c2.setopt(c2.WRITEFUNCTION, c2.body.write)
         c3.setopt(c3.WRITEFUNCTION, c3.body.write)
@@ -289,20 +289,20 @@ class MultiTest(unittest.TestCase):
         c2.close()
         c3.close()
         
-        self.assertEqual('success', c1.body.getvalue())
-        self.assertEqual('success', c2.body.getvalue())
-        self.assertEqual('success', c3.body.getvalue())
+        self.assertEqual('success', c1.body.getvalue().decode())
+        self.assertEqual('success', c2.body.getvalue().decode())
+        self.assertEqual('success', c3.body.getvalue().decode())
     
     def test_multi_info_read(self):
         c1 = pycurl.Curl()
         c2 = pycurl.Curl()
         c3 = pycurl.Curl()
-        c1.setopt(c1.URL, "http://localhost:8380/success")
-        c2.setopt(c2.URL, "http://localhost:8381/success")
-        c3.setopt(c3.URL, "http://localhost:8382/success")
-        c1.body = util.StringIO()
-        c2.body = util.StringIO()
-        c3.body = util.StringIO()
+        c1.setopt(c1.URL, "http://localhost:8380/short_wait")
+        c2.setopt(c2.URL, "http://localhost:8381/short_wait")
+        c3.setopt(c3.URL, "http://localhost:8382/short_wait")
+        c1.body = util.BytesIO()
+        c2.body = util.BytesIO()
+        c3.body = util.BytesIO()
         c1.setopt(c1.WRITEFUNCTION, c1.body.write)
         c2.setopt(c2.WRITEFUNCTION, c2.body.write)
         c3.setopt(c3.WRITEFUNCTION, c3.body.write)
@@ -355,6 +355,25 @@ class MultiTest(unittest.TestCase):
         c2.close()
         c3.close()
         
-        self.assertEqual('success', c1.body.getvalue())
-        self.assertEqual('success', c2.body.getvalue())
-        self.assertEqual('success', c3.body.getvalue())
+        self.assertEqual('success', c1.body.getvalue().decode())
+        self.assertEqual('success', c2.body.getvalue().decode())
+        self.assertEqual('success', c3.body.getvalue().decode())
+    
+    def test_multi_close(self):
+        m = pycurl.CurlMulti()
+        m.close()
+    
+    def test_multi_close_twice(self):
+        m = pycurl.CurlMulti()
+        m.close()
+        m.close()
+    
+    # positional arguments are rejected
+    @nose.tools.raises(TypeError)
+    def test_positional_arguments(self):
+        pycurl.CurlMulti(1)
+    
+    # keyword arguments are rejected
+    @nose.tools.raises(TypeError)
+    def test_keyword_arguments(self):
+        pycurl.CurlMulti(a=1)

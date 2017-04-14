@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 # vi:ts=4:et
 
 import os.path
@@ -28,13 +28,14 @@ class WriteAbortTest(unittest.TestCase):
     
     def check(self, write_cb):
         # download the script itself through the file:// protocol into write_cb
-        c = pycurl.Curl()
         self.curl.setopt(pycurl.URL, 'file://' + os.path.abspath(sys.argv[0]))
         self.curl.setopt(pycurl.WRITEFUNCTION, write_cb)
         try:
             self.curl.perform()
+            
+            self.fail('Should not get here')
         except pycurl.error:
-            err, msg = sys.exc_info()[1]
+            err, msg = sys.exc_info()[1].args
             # we expect pycurl.E_WRITE_ERROR as the response
             assert pycurl.E_WRITE_ERROR == err
 

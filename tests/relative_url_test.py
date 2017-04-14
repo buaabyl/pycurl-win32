@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 # vi:ts=4:et
 
 # uses the high level interface
@@ -19,4 +19,4 @@ class RelativeUrlTest(unittest.TestCase):
     
     def test_get_relative(self):
         self.curl.get('/success')
-        self.assertEqual('success', self.curl.body())
+        self.assertEqual('success', self.curl.body().decode())

@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 # vi:ts=4:et
 
 import pycurl
@@ -25,9 +25,12 @@ def teardown_module(mod):
 class MultiSocketTest(unittest.TestCase):
     def test_multi_socket(self):
         urls = [
-            'http://localhost:8380/success',
-            'http://localhost:8381/success',
-            'http://localhost:8382/success',
+            # not sure why requesting /success produces no events.
+            # see multi_socket_select_test.py for a longer explanation
+            # why short wait is used there.
+            'http://localhost:8380/short_wait',
+            'http://localhost:8381/short_wait',
+            'http://localhost:8382/short_wait',
         ]
 
         socket_events = []
@@ -39,14 +42,13 @@ class MultiSocketTest(unittest.TestCase):
 
         # init
         m = pycurl.CurlMulti()
-        m.setopt(pycurl.M_PIPELINING, 1)
         m.setopt(pycurl.M_SOCKETFUNCTION, socket)
         m.handles = []
         for url in urls:
             c = pycurl.Curl()
             # save info in standard Python attributes
             c.url = url
-            c.body = util.StringIO()
+            c.body = util.BytesIO()
             c.http_code = -1
             m.handles.append(c)
             # pycurl API calls
@@ -74,7 +76,7 @@ class MultiSocketTest(unittest.TestCase):
 
         # print result
         for c in m.handles:
-            self.assertEqual('success', c.body.getvalue())
+            self.assertEqual('success', c.body.getvalue().decode())
             self.assertEqual(200, c.http_code)
             
             # multi, not curl handle

@@ -1,18 +1,14 @@
-# Object files
-*.o
-*.ko
-
-# Libraries
-*.lib
-*.a
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
+*.pyc
+*.pyo
+/MANIFEST
+/build
+/dist
+/src/allpycurl.c
+/src/docstrings.c
+/src/docstrings.h
+/tests/tmp
+/tests/fake-curl/libcurl/*.so
+/www/htdocs/download/*.bz2
+/www/htdocs/download/*.exe
+/www/htdocs/download/*.gz
+/www/upload/*
